@@ -10,15 +10,18 @@ David Shields-- demonstrating how to tune The PID controller.
 
 //Define parameters
 #define Kp 0.03//tuning for p
-#define Ki 0.003//tuning for i
+#define Ki 0.0//tuning for i
 #define Kd 0.0//tuning for d
 int Tolerance =30;//how close is close enough?
 #define dt 0.005 //duration of loop
 float max_out= 0.25; //output limits
 float min_out =-0.25;//^^^^^^^^^^^^
+float deadzone= -0.1;
+static float init_error= 0;
+static float init_errorLeft= 0;
+static float init_errorRight= 0;
 float PID(float setpoint, float ProcessValue)
 {
-	static float init_error= 0;
 	static float integral=0;
 	float error;
 	float derivative;
@@ -44,8 +47,26 @@ float PID(float setpoint, float ProcessValue)
 		{
 		PIDoutput= max_out;
 		}
+		if(std::abs(PIDoutput)<deadzone)
+		{
+			if(PIDoutput<0)
+			{
+				PIDoutput=deadzone;
+			}
+			if(PIDoutput>0)
+			{
+				PIDoutput=deadzone;
+			}
+		}
 	//Update error, this program has to be run in a loop so that error can be corected over time
 	init_error= error;
 	return PIDoutput;
+}
+
+void ClearPID()
+{
+ init_error= 0;
+ init_errorLeft= 0;
+ init_errorRight= 0;
 }
 #endif
