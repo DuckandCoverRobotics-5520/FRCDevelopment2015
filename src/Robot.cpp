@@ -157,7 +157,10 @@ void Turn(int Angle)//clockwise is negative
 		int Ttolerance=15;
 		printf("\n ArcLength: %f", ArcLength);
 		int Target= abs(round(ArcLength*enc_in));//goal
-		PIDLeft->SetSetpoint(Target);
+		PIDLeft.SetTolerance(Ttolerance);
+		PIDRight.SetTolerance(Ttolerance);
+		PIDLeft.SetOutputRange(-0.35, 0.35);
+		PIDRight.SetOutputRange(-0.35, 0.35);
 		if(Angle<0)
 		{
 			LeftEnc->Reset();
@@ -170,28 +173,18 @@ void Turn(int Angle)//clockwise is negative
 				}
 			SetSpeed(Stop);
 		}
-		if(Angle>0)
+		if(Angle>0)//turn left
 		{
+			PIDLeft.SetSetpoint(-Target);
+			PIDRight.SetSetpoint(Target);
 			LeftEnc->Reset();
 			RightEnc->Reset();
-			int Lenc=LeftEnc->GetRaw();
-			int Renc=LeftEnc->GetRaw();
-			while(Renc!=Target && Lenc!=Target)	//turn counterclockwise
-				{
-				Lenc=LeftEnc->GetRaw();
-				Renc=LeftEnc->GetRaw();
-					if( abs(Target-Lenc)<Ttolerance )
-					{
-						Lenc=Target;
-					}
-					if((abs(Target-Renc))<Ttolerance)
-					{
-						Renc=Target;
-					}
-					SetSpeed(PIDLeft.Get(), PIDRight.Get());//turn left using pid to correct error
-					printf("\n Left: %i",LeftEnc->GetRaw ());
-					printf("\n Right: %i",RightEnc->GetRaw());
-				}
+			while(true)
+			{
+			SetSpeed(PIDLeft.Get(), PIDRight.Get());//turn left using pid to correct error
+			printf("\n Left: %i",LeftEnc->GetRaw ());
+			printf("\n Right: %i",RightEnc->GetRaw());
+			}
 			SetSpeed(Stop);
 		}
 	}
