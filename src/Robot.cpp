@@ -19,8 +19,8 @@ class Robot: public SampleRobot{
 	Victor Right2;
 	Victor Lift1;
 	Victor Lift2;
-	Victor DualL;
-	Victor DualR;
+	PIDController PIDLeft;
+	PIDController PIDRight;
 	DigitalInput Lim_base;
 	DigitalInput Lim_top;
 	DigitalInput Lim_stack;
@@ -29,8 +29,7 @@ class Robot: public SampleRobot{
 //	Encoder *LiftEnc;
 	AnalogInput Ultra;
 	AnalogInput Pot;
-	PIDController PIDLeft;
-	PIDController PIDRight;
+
 	const int CurrentLimit=0;//will be defined later
 	bool smartOverride = false;
 	bool DynamicBraking=false;
@@ -55,13 +54,16 @@ public:
 	Right2(3),
 	Lift1(4),
 	Lift2(5),
+	PIDLeft(0.3, 0.0, 0.0, LeftEnc, &Left1 ,0.005),
+	PIDRight(0.3, 0.0, 0.0,RightEnc, &Right1 ,0.005),
 	Lim_base(7),//normally closed
 	Lim_top(6),//normally closed
 	Lim_stack(8),//normally closed
 	Ultra(0),
-	Pot(1),//probably not in use...
-	PIDLeft(0.3, 0.0, 0.0, &LeftEnc, Left1 ,0.005),
-	PIDRight(0.3, 0.0, 0.0, &RightEnc, Right1 ,0.005)
+	Pot(1)//probably not in use...
+
+
+
 	{
 		m_pdp =new PowerDistributionPanel();
 		LeftEnc = new Encoder(4, 5, true, Encoder::EncodingType::k4X);//250 ppr *k4x =1000 PPR
@@ -175,15 +177,19 @@ void Turn(int Angle)//clockwise is negative
 		}
 		if(Angle>0)//turn left
 		{
-			PIDLeft.SetSetpoint(-Target);
-			PIDRight.SetSetpoint(Target);
 			LeftEnc->Reset();
 			RightEnc->Reset();
+			PIDLeft.SetSetpoint(-Target);
+			PIDRight.SetSetpoint(Target);
+			PIDLeft.Enable();
+			PIDRight.Enable();
+
 			while(true)
 			{
 			SetSpeed(PIDLeft.Get(), PIDRight.Get());//turn left using pid to correct error
 			printf("\n Left: %i",LeftEnc->GetRaw ());
 			printf("\n Right: %i",RightEnc->GetRaw());
+			Wait(0.005);
 			}
 			SetSpeed(Stop);
 		}
@@ -359,7 +365,7 @@ return Diff/Maxj>Tolerance;
 					}
 				}
 			}
-		//WHAT TO DO IF CONTROLL IS OVERIDED
+//		WHAT TO DO IF CONTROLL IS OVERIDED
 //		else//toggle to joystick only if the Launchpad switch is in Diable state
 //		{
 //			if(stick2.GetRawButton(8)==1)
