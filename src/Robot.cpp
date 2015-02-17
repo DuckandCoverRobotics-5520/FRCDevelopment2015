@@ -59,7 +59,7 @@ public:
 
 	{
 		m_pdp =new PowerDistributionPanel();
-		LeftEnc = new Encoder(4, 5, false, Encoder::EncodingType::k4X);//250 ppr *k4x =1000 PPR
+		LeftEnc = new Encoder(4, 5, true, Encoder::EncodingType::k4X);//250 ppr *k4x =1000 PPR
 		RightEnc =new Encoder(2, 3, false, Encoder::EncodingType::k4X);//250 ppr *k4x =1000 PPR
 		CameraServer::GetInstance()->SetQuality(50);//the camera name (ex "cam0") can be found through the roborio web interface
 		CameraServer::GetInstance()->StartAutomaticCapture("cam0");//myRobot.SetExpiration(0.1);
@@ -146,9 +146,11 @@ void Turn(int Angle)//clockwise is negative
 		float circumfrence = 2*(M_PI)*2;
 		int ppr = 1000;
 		float enc_in=ppr/circumfrence;//result
-		float WheelbaseRadius = 23.25/2;
+		float WheelbaseRadius = 25/2;
 		float ArcLength=(M_PI/180)*Angle*WheelbaseRadius;//result
-		float Tspeed=0.25;
+		float Tspeed=0.33;
+		//float Tbrake =0.04;
+		int Ttolerance=15;
 		printf("\n ArcLength: %f", ArcLength);
 		int Target= abs(round(ArcLength*enc_in));//goal
 		if(Angle<0)
@@ -167,11 +169,25 @@ void Turn(int Angle)//clockwise is negative
 		{
 			LeftEnc->Reset();
 			RightEnc->Reset();
-			while(RightEnc->GetRaw()<Target)	//turn counterclockwise
+			int Lenc=LeftEnc->GetRaw();
+			int Renc=LeftEnc->GetRaw();
+			while(Renc!=Target && Lenc!=Target)	//turn counterclockwise
 				{
-					SetSpeed(-Tspeed,Tspeed);//turn left
+				Lenc=LeftEnc->GetRaw();
+				Renc=LeftEnc->GetRaw();
+
+					if( abs(Target-Lenc)<Ttolerance )
+					{
+						Lenc=Target;
+					}
+					if((abs(Target-Renc))<Ttolerance)
+					{
+						Renc=Target;
+					}
+					SetSpeed(  PID(-Target, Lenc), PID(Target, Renc)  );//turn left using pid to correct error
 					printf("\n Left: %i",LeftEnc->GetRaw ());
 					printf("\n Right: %i",RightEnc->GetRaw());
+					Wait(0.005);
 				}
 			SetSpeed(Stop);
 		}
@@ -188,8 +204,8 @@ return Diff/Maxj>Tolerance;
 	void Autonomous()
 	{
 		 		Turn(90);// tested--Working
-		 		Wait(1.5);
-		 		Turn(-90);//tested--FAIL didnotstop
+//		 		Wait(1.5);
+//		 		Turn(-90);//tested--FAIL did not stop
 //		 		Wait(1.5);
 //		 		Drive(15,0.25);//tested Reverse
 //		 		RunLift(127);//tested--Working

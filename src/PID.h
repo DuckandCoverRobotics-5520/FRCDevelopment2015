@@ -10,12 +10,12 @@ David Shields-- demonstrating how to tune The PID controller.
 
 //Define parameters
 #define Kp 0.03//tuning for p
-#define Ki 0.0//tuning for i
+#define Ki 0.003//tuning for i
 #define Kd 0.0//tuning for d
 int Tolerance =30;//how close is close enough?
 #define dt 0.005 //duration of loop
-float max_out= 0.75; //output limits
-float min_out =-0.75;//^^^^^^^^^^^^
+float max_out= 0.25; //output limits
+float min_out =-0.25;//^^^^^^^^^^^^
 float PID(float setpoint, float ProcessValue)
 {
 	static float init_error= 0;
