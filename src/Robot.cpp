@@ -65,23 +65,23 @@ public:
 		CameraServer::GetInstance()->StartAutomaticCapture("cam0");//myRobot.SetExpiration(0.1);
 
 	}
-	void SetLiftSpeed(float nspeed)
+void SetLiftSpeed(float nspeed)
 	{
 	Lift1.Set(nspeed);
 	Lift2.Set(nspeed);
 	}
-	void SetSpeed(float nSpeed)
+void SetSpeed(float nSpeed)
 	{
 		SetSpeed(nSpeed, nSpeed);
 	}
-	void SetSpeed(float nLeftSpeed, float nRightSpeed)
+void SetSpeed(float nLeftSpeed, float nRightSpeed)
 	{
 		Left1.Set(-nLeftSpeed);
 		Left2.Set(-nLeftSpeed);
 		Right1.Set(nRightSpeed);
 		Right2.Set(nRightSpeed);
 	}
-	void RunLift(int Position)//0->255
+void RunLift(int Position)//0->255
 	{
 		LiftRunning=true;
 		float CurrPosition = Map(Pot.GetVoltage(),1.54,0.60,0,255);
@@ -113,7 +113,7 @@ public:
 		}
 		LiftRunning=false;
 	}
-	void Drive(int distance, float speed)
+void Drive(int distance, float speed)
 	{
 			float C=2*M_PI*2;
 			int Target= (1000/C)*distance;//en/in
@@ -178,14 +178,14 @@ void Turn(int Angle)//clockwise is negative
 	}
 
 
-			bool ShouldTurn(float J1,float J2)
-		{
-			float Maxj =std::max(J1,J2);
-			float Diff=Maxj-std::min(J1,J2);
-			float Tolerance = 0.15;
-			return Diff/Maxj>Tolerance;
-		}
-		 	void Autonomous()
+bool ShouldTurn(float J1,float J2)
+{
+float Maxj =std::max(J1,J2);
+float Diff=Maxj-std::min(J1,J2);
+float Tolerance = 0.15;
+return Diff/Maxj>Tolerance;
+}
+	void Autonomous()
 	{
 		 		Turn(90);// tested--Working
 		 		Wait(1.5);
