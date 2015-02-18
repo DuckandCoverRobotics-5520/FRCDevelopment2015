@@ -1,6 +1,6 @@
 #include <UsrMath.h>
 #include "WPILib.h"
-#include "PID.h"
+#include <PID.h>
 #include <math.h>
 #include <algorithm>
 #define OPEN 1//breaks the circuit
@@ -146,48 +146,195 @@ void Turn(int Angle)//clockwise is negative
 		float circumfrence = 2*(M_PI)*2;
 		int ppr = 1000;
 		float enc_in=ppr/circumfrence;//result
-		float WheelbaseRadius = 25/2;
+		float WheelbaseRadius = 25.25/2;
 		float ArcLength=(M_PI/180)*Angle*WheelbaseRadius;//result
 		float Tspeed=0.33;
+		float Rspeed=0;
+		float Lspeed=0;
 		//float Tbrake =0.04;
-		int Ttolerance=15;
+		int Ttolerance=10;
+		float ProximityZone = ppr/32;
 		printf("\n ArcLength: %f", ArcLength);
 		int Target= abs(round(ArcLength*enc_in));//goal
 		if(Angle<0)
 		{
 			LeftEnc->Reset();
 			RightEnc->Reset();
-			while(LeftEnc->GetRaw()<Target)//turn clockwise
+			while(RightEnc->GetRaw()!=Target || LeftEnc->GetRaw()!=Target)	//turn left
 				{
-					SetSpeed(Tspeed,-Tspeed);//turn right
-					printf("\n Left: %i",LeftEnc->GetRaw());
-					printf("\n Right: %i",RightEnc->GetRaw());
+			int Lenc= LeftEnc->GetRaw();
+			int Renc= RightEnc->GetRaw();
+					if(std::abs(Target- Renc)>Ttolerance)//if right is not within tolerance
+					{
+						if(Renc<Target)//if we are not there yet
+						{
+
+							int Distance =Target-Renc;
+							printf("\n Renc<Target:%i", Distance);
+							if(Distance > ProximityZone)//run normally
+							{
+								Rspeed=-Tspeed;
+							}
+							if(Distance < ProximityZone)//slow down were getting close
+							{
+								Rspeed=-0.15;
+							}
+						}
+						else if(Renc>Target)//if we went too far
+						{
+							int Distance =Target-Renc;
+							printf("\n Renc>Target:%i", Distance);
+							if(Distance > ProximityZone)//backup to get closer
+							{
+								Rspeed=Tspeed;
+							}
+							if(Distance < ProximityZone)//slow down were getting close
+							{
+								Rspeed=0.15;
+							}
+						}
+					}
+					else
+					{
+						printf("\n !Right tolerance achieved!");
+						Rspeed=0;
+					}
+					int PLenc= -1*Lenc;
+					 if(std::abs(Target-PLenc)>Ttolerance)//if left is not within tolerance
+					{
+						if(PLenc< Target)//if we are not there yet
+						{
+							int Distance = Target - PLenc;
+							printf("\n PLenc< Target:%i", Distance);
+							if(Distance > ProximityZone)
+							{
+								Lspeed=Tspeed;
+							}
+							if(Distance < ProximityZone)
+							{
+								Lspeed=0.15;
+							}
+						}
+						else if(PLenc> Target)//if we went too far
+						{
+							int Distance = Target - PLenc;
+							printf("\n PLenc< Target:%i", Distance);
+							if(Distance > ProximityZone)
+							{
+								Lspeed=-Tspeed;
+							}
+							if(Distance < ProximityZone)
+							{
+								Lspeed=-0.15;
+							}
+						}
+					}
+					else
+					{
+						Lspeed=0;
+						printf("\n !Left tolerance achieved!");
+					}
+					 	printf("\n SetSpeed( %f , %f ) \n",Lspeed,Rspeed);
+					 	SetSpeed(Lspeed,Rspeed);//turn left
+					 	if(Lspeed==0 && Rspeed==0)
+					 	{
+					 		printf("Turn( %i ) -> Achieved", Angle);
+					 		break;
+					 	}
+						//printf("\n Left: %i",LeftEnc->GetRaw ());
+						//printf("\n Right: %i",RightEnc->GetRaw());
 				}
 			SetSpeed(Stop);
-		}
+		}//end working turn v2
+
+
 		if(Angle>0)
 		{
 			LeftEnc->Reset();
 			RightEnc->Reset();
-			int Lenc=LeftEnc->GetRaw();
-			int Renc=LeftEnc->GetRaw();
-			while(Renc!=Target && Lenc!=Target)	//turn counterclockwise
+			while(RightEnc->GetRaw()!=Target || LeftEnc->GetRaw()!=Target)	//turn Right
 				{
-				Lenc=LeftEnc->GetRaw();
-				Renc=LeftEnc->GetRaw();
+			int Lenc= LeftEnc->GetRaw();
+			int Renc= RightEnc->GetRaw();
+					if(std::abs(Target- Renc)>Ttolerance)//if right is not within tolerance
+					{
+						if(Renc<Target)//if we are not there yet
+						{
 
-					if( abs(Target-Lenc)<Ttolerance )
-					{
-						Lenc=Target;
+							int Distance =Target-Renc;
+							printf("\n Renc<Target:%i", Distance);
+							if(Distance > ProximityZone)//run normally
+							{
+								Rspeed=-Tspeed;
+							}
+							if(Distance < ProximityZone)//slow down were getting close
+							{
+								Rspeed=-0.15;
+							}
+						}
+						else if(Renc>Target)//if we went too far
+						{
+							int Distance =Target-Renc;
+							printf("\n Renc>Target:%i", Distance);
+							if(Distance > ProximityZone)//backup to get closer
+							{
+								Rspeed=Tspeed;
+							}
+							if(Distance < ProximityZone)//slow down were getting close
+							{
+								Rspeed=0.15;
+							}
+						}
 					}
-					if((abs(Target-Renc))<Ttolerance)
+					else
 					{
-						Renc=Target;
+						printf("\n !Right tolerance achieved!");
+						Rspeed=0;
 					}
-					SetSpeed(  PID(-Target, Lenc), PID(Target, Renc)  );//turn left using pid to correct error
-					printf("\n Left: %i",LeftEnc->GetRaw ());
-					printf("\n Right: %i",RightEnc->GetRaw());
-					Wait(0.005);
+					int PLenc= -1*Lenc;
+					 if(std::abs(Target-PLenc)>Ttolerance)//if left is not within tolerance
+					{
+						if(PLenc< Target)//if we are not there yet
+						{
+							int Distance = Target - PLenc;
+							printf("\n PLenc< Target:%i", Distance);
+							if(Distance > ProximityZone)
+							{
+								Lspeed=Tspeed;
+							}
+							if(Distance < ProximityZone)
+							{
+								Lspeed=0.15;
+							}
+						}
+						else if(PLenc> Target)//if we went too far
+						{
+							int Distance = Target - PLenc;
+							printf("\n PLenc< Target:%i", Distance);
+							if(Distance > ProximityZone)
+							{
+								Lspeed=-Tspeed;
+							}
+							if(Distance < ProximityZone)
+							{
+								Lspeed=-0.15;
+							}
+						}
+					}
+					else
+					{
+						Lspeed=0;
+						printf("\n !Left tolerance achieved!");
+					}
+					 	printf("\n SetSpeed( %f , %f ) \n",Lspeed,Rspeed);
+					 	SetSpeed(Lspeed,Rspeed);//turn left
+					 	if(Lspeed==0 && Rspeed==0)
+					 	{
+					 		printf("Turn( %i ) -> Achieved", Angle);
+					 		break;
+					 	}
+						//printf("\n Left: %i",LeftEnc->GetRaw ());
+						//printf("\n Right: %i",RightEnc->GetRaw());
 				}
 			SetSpeed(Stop);
 		}
@@ -203,9 +350,9 @@ return Diff/Maxj>Tolerance;
 }
 	void Autonomous()
 	{
-		 		Turn(90);// tested--Working
-//		 		Wait(1.5);
-//		 		Turn(-90);//tested--FAIL did not stop
+		 		Turn(90);// tested--fail not stop
+		 		Wait(1.5);
+		 		Turn(-90);//tested--Working
 //		 		Wait(1.5);
 //		 		Drive(15,0.25);//tested Reverse
 //		 		RunLift(127);//tested--Working
