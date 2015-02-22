@@ -116,29 +116,59 @@ void Drive(int distance, float speed)
 	{
 			float C=2*M_PI*2;
 			int Target= (1000/C)*distance;//en/in
-			if(distance>0)
+			int LastLeft=0;
+			int LastRight=0;
+			int DeltaX=0;
+			int DeltaY=0;
+			float Lspeed=speed;
+			float Rspeed=speed;
+			float Fastspeed=speed*1.5;
+			LeftEnc->Reset();
+			RightEnc->Reset();
+			int CurrRight=0;
+			int CurrLeft=0;
+		while((CurrRight<Target && CurrLeft<Target)&&(IsEnabled()&&IsAutonomous()))//may need to or Curr left and right
+		{
+			CurrRight=RightEnc->Get();
+			CurrLeft=LeftEnc->Get();
+			int Difference = CurrLeft - CurrRight;
+
+			if(distance>0)//forward
 			{
-				//drive forward until position achieved
-				printf("\n target: %i ",Target);
-				RightEnc->Reset();
-				while(RightEnc->GetRaw()>Target)
+				//is CurrRight>CurrLeft
+				//is CurrRight<CurrLeft
+				if(CurrRight>CurrLeft)//veering left
 				{
-					SetSpeed(speed);
+				//turn right
+					Lspeed=Fastspeed;
+					Rspeed=speed;
 				}
-				SetSpeed(Stop);
+				if(CurrRight<CurrLeft)//veering Right
+				{
+					//turn left
+					Lspeed=speed;
+					Rspeed=Fastspeed;
+				}
 			}
-			if(distance<0)
+			if(distance<0)//reverse
 			{
-				//drive backward until position achieved
-				printf("\n target: %i ",Target);
-				RightEnc->Reset();
-				while(RightEnc->GetRaw()<Target)
+				if(CurrRight>CurrLeft)//veering left
 				{
-					SetSpeed(-speed);
+				//turn left
+
 				}
-				SetSpeed(Stop);
+				if(CurrRight<CurrLeft)//veering Right
+				{
+					//turn right
+
+				}
 			}
-	}
+			SetSpeed(Lspeed,Rspeed);
+			printf("\n \n LEnc: %i, REnc:%i, Lspeed:%f, Rspeed:%f Target:%i", CurrLeft, CurrRight, Lspeed, Rspeed, Target);
+			printf("\n Difference: %i",Difference);
+			Wait(0.005);
+		}
+}
 
 void Turn(int Angle)//clockwise is negative
 {
@@ -360,7 +390,7 @@ void TestSimMtr()
 			printf(" %i", curRValue);
 			//printf("\n%f", Pot.GetVoltage());
 		}
-	Wait(0.005);
+//	Wait(0.005);
 	}
 }
 bool ShouldTurn(float J1,float J2)
@@ -376,7 +406,7 @@ return Diff/Maxj>Tolerance;
 //				Turn(90);// tested--Working.
 //				Wait(1.5);
 //		 		Turn(-90);//tested--Working.
-//
+				Drive(1000,0.3);
 //Pre-Bag-Day
 	//				Turn(90);// tested--fail not stop
 	//				Wait(1.5);
@@ -561,7 +591,13 @@ return Diff/Maxj>Tolerance;
 
 	void Test()
 	{
-	TestSimMtr();
+		LeftEnc->Reset();
+		while(IsTest()&&IsEnabled())
+		{
+		printf("\n LeftEnc:%i",LeftEnc->GetRaw());
+		Left1.Set(PID(1000,LeftEnc->GetRaw()));
+		Wait(0.005);
+		}
 	}
 
 };
