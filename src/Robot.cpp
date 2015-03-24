@@ -5,6 +5,7 @@
 #include <algorithm>
 #define OPEN 1//breaks the circuit
 #define CLOSED 0//completes the circuit
+
 class Robot: public SampleRobot{
 	//RobotDrive myRobot; // robot drive system
 	PowerDistributionPanel *m_pdp;
@@ -27,12 +28,15 @@ class Robot: public SampleRobot{
 //	Encoder *LiftEnc;
 	AnalogInput Ultra;
 	AnalogInput Pot;
+	//Compressor mCompressor;
+	DoubleSolenoid Pusher;
 	const int CurrentLimit=0;//will be defined later
 	bool smartOverride = false;
 	bool DynamicBraking=false;
 	bool LiftRunning = false;
 	int LoadPosition=0;
-	int StackPosition=0;
+	int StacPusherPosition=0;
+	int	PusherPosition;
 	float Stop=0.0;
 	bool pressed=false;
 	int Setpoint=0;
@@ -55,14 +59,17 @@ public:
 	Lim_top(6),//normally closed
 	Lim_stack(8),//normally closed
 	Ultra(0),
-	Pot(1)//probably not in use...
-
+	Pot(1),//probably not in use...
+	Pusher(1,0)
 	{
 		m_pdp =new PowerDistributionPanel();
 		LeftEnc = new Encoder(4, 5, true, Encoder::EncodingType::k4X);//250 ppr *k4x =1000 PPR
 		RightEnc =new Encoder(2, 3, false, Encoder::EncodingType::k4X);//250 ppr *k4x =1000 PPR
-		//CameraServer::GetInstance()->SetQuality(50);//the camera name (ex "cam0") can be found through the roborio web interface
-		//CameraServer::GetInstance()->StartAutomaticCapture("cam0");//myRobot.SetExpiration(0.1);
+		Compressor *mCompressor =new Compressor(0);
+		//Pusher =new DoubleSolenoid(0,1);
+		CameraServer::GetInstance()->SetQuality(50);//the camera name (ex "cam0") can be found through the roborio web interface
+		CameraServer::GetInstance()->StartAutomaticCapture("cam0");//myRobot.SetExpiration(0.1);
+		mCompressor->SetClosedLoopControl(true);
 	}
 void SetLiftSpeed(float nspeed)
 	{
@@ -455,7 +462,22 @@ return Diff/Maxj>Tolerance;
 //			SetSpeed(Stop);
 //			}
 			SetSpeed(J1Y/2,J2Y/2);
-
+			//pnumatic pusher
+			if(stick2.GetRawButton(1))
+			{
+				Pusher.Set(DoubleSolenoid::kForward);//forward
+				PusherPosition=1;
+			}
+			else if (PusherPosition==1 && !(stick2.GetRawButton(1)))
+			{
+				Pusher.Set(DoubleSolenoid::kReverse);//reverse
+				PusherPosition=0;//exception to make this occurrence possible only once after every actuation
+				Wait(0.05);//give the valve time to open--(0.005-way too fast), (0.01-too fast), (0.05-good timing, occasionally misses +buggy), may need to add more time
+			}else
+			{
+				Pusher.Set(DoubleSolenoid::kOff);//off
+				PusherPosition=-1;//for diagnostics and consistency
+			}
 
 
 
@@ -543,7 +565,8 @@ return Diff/Maxj>Tolerance;
 					}
 				}
 			}
-			else if(smartOverride)//toggle to limits only
+		//WHAT TO DO IF CONTROLL IS OVERIDED
+			else if(smartOverride)//toggle to no limits
 			{
 				if(stick3.GetRawButton(1))//if the joystick3 trigger is pressed
 				{
@@ -566,8 +589,6 @@ return Diff/Maxj>Tolerance;
 					}
 				}
 			}
-		//WHAT TO DO IF CONTROLL IS OVERIDED
-//		else//toggle to joystick only if the Launchpad switch is in Diable state
 //		{
 //			if(stick2.GetRawButton(8)==1)
 //			{
