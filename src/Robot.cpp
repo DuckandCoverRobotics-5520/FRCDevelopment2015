@@ -28,6 +28,7 @@ class Robot: public SampleRobot{
 //	Encoder *LiftEnc;
 	AnalogInput Ultra;
 	AnalogInput Pot;
+	AnalogInput Selector;
 	//Compressor mCompressor;
 	DoubleSolenoid Pusher;
 	const int CurrentLimit=0;//will be defined later
@@ -36,7 +37,8 @@ class Robot: public SampleRobot{
 	bool LiftRunning = false;
 	int LoadPosition=0;
 	int StacPusherPosition=0;
-	int	PusherPosition;
+	int	PusherPosition=1;
+	int StartPosition=-1;
 	float Stop=0.0;
 	bool pressed=false;
 	int Setpoint=0;
@@ -59,7 +61,8 @@ public:
 	Lim_top(6),//normally closed
 	Lim_stack(8),//normally closed
 	Ultra(0),
-	Pot(1),//probably not in use...
+	Pot(1),//
+	Selector(3),
 	Pusher(1,0)
 	{
 		m_pdp =new PowerDistributionPanel();
@@ -67,8 +70,11 @@ public:
 		RightEnc =new Encoder(2, 3, false, Encoder::EncodingType::k4X);//250 ppr *k4x =1000 PPR
 		Compressor *mCompressor =new Compressor(0);
 		//Pusher =new DoubleSolenoid(0,1);
-		CameraServer::GetInstance()->SetQuality(50);//the camera name (ex "cam0") can be found through the roborio web interface
-		CameraServer::GetInstance()->StartAutomaticCapture("cam0");//myRobot.SetExpiration(0.1);
+		//CameraServer::GetInstance()->SetQuality(50);//the camera name (ex "cam0") can be found through the roborio web interface
+		//auto cam = std::make_shared<USBCamera>("cam0",true);
+		//cam->SetExposureAuto();
+		CameraServer::GetInstance()->StartAutomaticCapture("cam0");//change to cam if shared
+	//	myRobot.SetExpiration(0.1);
 		mCompressor->SetClosedLoopControl(true);
 	}
 void SetLiftSpeed(float nspeed)
@@ -97,7 +103,7 @@ void RunLift(int Position)//0->255
 			printf("\n CurrPosition:%f", CurrPosition);
 			if(CurrPosition>Position)//move down
 			{
-				while(CurrPosition>Position && LiftRunning)
+				while(CurrPosition>Position && LiftRunning && Lim_top.Get()==CLOSED && Lim_base.Get()==CLOSED)
 				{
 					printf("\nCurrPosition:%f", CurrPosition);
 					CurrPosition = Map(Pot.GetVoltage(),1.54,0.60,0,255);
@@ -108,7 +114,7 @@ void RunLift(int Position)//0->255
 			else if(CurrPosition<Position)//move up
 			{
 				printf("\n CurrPosition:%f", CurrPosition);
-				while(CurrPosition<Position && LiftRunning)
+				while(CurrPosition<Position && LiftRunning && Lim_top.Get()==CLOSED && Lim_base.Get()==CLOSED)
 				{
 					printf("\n CurrPosition:%f", CurrPosition);
 					CurrPosition = Map(Pot.GetVoltage(),1.54,0.60,0,255);
@@ -119,6 +125,64 @@ void RunLift(int Position)//0->255
 		}
 		LiftRunning=false;
 	}
+
+void RunLiftTime(int direction, float time)
+{
+	printf("RLT:%f", time);
+	float total_time = 0;
+
+	if(Lim_top.Get()==CLOSED)
+	{
+		while(total_time < time && Lim_top.Get()==CLOSED)
+		{
+			SetLiftSpeed(-0.7);
+			Wait(0.05);
+			total_time += 0.05;
+			printf("running Lift");
+		}
+		SetLiftSpeed(Stop);
+	}
+	else if(Lim_base.Get()==CLOSED)
+	{
+		while(total_time < time && Lim_base.Get()==CLOSED)
+		{
+			SetLiftSpeed(0.7);
+			Wait(0.05);
+			total_time += 0.05;
+			printf("running Lift");
+		}
+		SetLiftSpeed(Stop);
+	}
+	else
+	{
+		printf("LimTop:%i",(int)Lim_top.Get());
+		printf("LimBase:%i",(int)Lim_base.Get());
+	}
+
+}
+
+void RunLiftToSwitch(int direction) // 0 = bottom, 1 = top
+{
+	if(direction==0)
+	{
+		while(Lim_base.Get()==CLOSED && IsAutonomous())
+		{
+			SetLiftSpeed(0.7);
+			Wait(0.005);
+		}
+		SetLiftSpeed(Stop);
+	}
+	else if(direction==1)
+	{
+		while(Lim_top.Get()==CLOSED && IsAutonomous())
+		{
+			SetLiftSpeed(-0.7);
+			Wait(0.005);
+		}
+		SetLiftSpeed(Stop);
+	}
+
+}
 void Drive(int distance, float speed)
 	{
 			float C=2*M_PI*2;
@@ -407,13 +471,60 @@ float Diff=Maxj-std::min(J1,J2);
 float Tolerance = 0.15;
 return Diff/Maxj>Tolerance;
 }
-	void Autonomous()
+//void Disabled()
+//{
+//
+//}
+void Autonomous()
 	{
+	//determine position
+		for(int i=0; i<6; i++)
+		{
+		StartPosition=Map(Selector.GetVoltage(), 0, 4.9, 1,11);
+		Wait(0.005);
+		}
+		Wait(0.5);
+		printf("Position:%i",(int)StartPosition);
+		if(StartPosition<12)
+		{
+			if(StartPosition==1)
+			{
+				//Drive(68,0.3);//not working no stop and backwards
+			}
+			else if(StartPosition==11)
+			{
+				SetSpeed(-0.3);
+				Wait(3.6);
+				SetSpeed(0.0);
+			}
+			else if(StartPosition==10)
+			{
+				SetSpeed(-0.3);//forward
+				Wait(0.75);
+				SetSpeed(0.0);//stop
+				RunLiftTime(-1, 2.0);//Lift up
+				SetSpeed(-0.3);//forward
+				Wait(3.25);
+				SetSpeed(0.0);//stop
+				RunLiftToSwitch(0); // Lift->bottom
+				Pusher.Set(DoubleSolenoid::kForward);
+				PusherPosition=1;
+				Wait(3);
+				Pusher.Set(DoubleSolenoid::kReverse);
+				PusherPosition = 0;
+				SetSpeed(0.3);
+				Wait(1);
+				SetSpeed(0.0);
+			}
+			else
+			{
+			}
+		}
 //Post Bag Day
 //				Turn(90);// tested--Working.
 //				Wait(1.5);
 //		 		Turn(-90);//tested--Working.
-				Drive(1000,0.3);
+//				Drive(1000,0.3);
 //Pre-Bag-Day
 	//				Turn(90);// tested--fail not stop
 	//				Wait(1.5);
@@ -471,8 +582,9 @@ return Diff/Maxj>Tolerance;
 			else if (PusherPosition==1 && !(stick2.GetRawButton(1)))
 			{
 				Pusher.Set(DoubleSolenoid::kReverse);//reverse
-				PusherPosition=0;//exception to make this occurrence possible only once after every actuation
 				Wait(0.05);//give the valve time to open--(0.005-way too fast), (0.01-too fast), (0.05-good timing, occasionally misses +buggy), may need to add more time
+				PusherPosition=0;//exception to make this occurrence possible only once after every actuation
+
 			}else
 			{
 				Pusher.Set(DoubleSolenoid::kOff);//off
@@ -503,7 +615,7 @@ return Diff/Maxj>Tolerance;
 		//CHECK THAT PID OVERIDE IS ENABLED
 		if(!smartOverride)//so long as override is toggled off-> PID and Limits
 			{
-				if((Lim_top.Get()==CLOSED && Lim_base.Get()==CLOSED))//if niether or both switches are pressed
+				if((Lim_top.Get()==CLOSED && Lim_base.Get()==CLOSED))//if neither or both switches are pressed
 				{
 					if(stick3.GetRawButton(1))//if the joystick3 trigger is pressed
 					{
@@ -612,14 +724,13 @@ return Diff/Maxj>Tolerance;
 
 	void Test()
 	{
-		LeftEnc->Reset();
-		while(IsTest()&&IsEnabled())
-		{
-		printf("\n LeftEnc:%i",LeftEnc->GetRaw());
-		Left1.Set(PID(1000,LeftEnc->GetRaw()));
-		Wait(0.005);
-		}
+//		LeftEnc->Reset();
+//		while(IsTest()&&IsEnabled())
+//		{
+//		printf("\n LeftEnc:%i",LeftEnc->GetRaw());
+//		Left1.Set(PID(1000,LeftEnc->GetRaw()));
+//		Wait(0.005);
+//		}
 	}
-
 };
 START_ROBOT_CLASS(Robot);
