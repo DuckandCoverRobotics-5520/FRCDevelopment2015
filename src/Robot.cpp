@@ -285,12 +285,16 @@ return Diff/Maxj>Tolerance;
 					if(stick3.GetRawButton(1))//if the joystick3 trigger is pressed
 					{
 						LiftRunning=false;
+						printf("/n limit top %i", Lim_top.Get());
+						printf("/n limit bottom %i", Lim_base.Get());
 						Lift1.Set(-0.7);//up
 						Lift2.Set(-0.7);
 					}
 					else if(stick3.GetRawButton(2))
 					{
 						LiftRunning=false;
+						printf("/n limit top %i", Lim_top.Get());
+						printf("/n limit bottom %i", Lim_base.Get());
 						Lift1.Set(0.50);//down
 						Lift2.Set(0.50);
 					}
@@ -309,6 +313,8 @@ return Diff/Maxj>Tolerance;
 					if(stick3.GetRawButton(2)) //only down
 					{
 						LiftRunning=false;
+						printf("/n limit top %i", Lim_top.Get());
+						printf("/n limit bottom %i", Lim_base.Get());
 						Lift1.Set(0.5);
 						Lift2.Set(0.5);
 					}
@@ -328,6 +334,8 @@ return Diff/Maxj>Tolerance;
 					if(stick3.GetRawButton(1))//only up
 					{
 						LiftRunning=false;
+						printf("/n limit top %i", Lim_top.Get());
+						printf("/n limit bottom %i", Lim_base.Get());
 						Lift1.Set(-0.7);
 						Lift2.Set(-0.7);
 					}
